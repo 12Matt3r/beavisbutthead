@@ -1,0 +1,549 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: #fff;
+    overflow-x: hidden;
+}
+
+#app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.controls-header {
+    /* @tweakable header background color */
+    background: rgba(0, 0, 0, 0.8);
+    /* @tweakable header padding */
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    /* @tweakable header gap between elements */
+    gap: 15px;
+    backdrop-filter: blur(10px);
+    /* @tweakable header border color and thickness */
+    border-bottom: 2px solid #ff6b35;
+}
+
+.video-input-section {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#youtube-url {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    min-width: 250px;
+}
+
+#youtube-url::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+button, .upload-btn {
+    /* @tweakable button padding */
+    padding: 8px 16px;
+    /* @tweakable button background color */
+    background: #ff6b35;
+    /* @tweakable button text color */
+    color: white;
+    border: none;
+    /* @tweakable button border radius */
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    /* @tweakable button transition duration */
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+button:hover, .upload-btn:hover {
+    background: #e55a2b;
+    transform: translateY(-2px);
+}
+
+#video-upload {
+    display: none;
+}
+
+.session-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+#roast-counter {
+    background: rgba(255, 107, 53, 0.2);
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.9em;
+}
+
+#scene-container {
+    position: relative;
+    /* @tweakable scene container width */
+    width: 100%;
+    /* @tweakable scene container height */
+    height: 100vh;
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* @tweakable scene container minimum height */
+    min-height: 500px;
+}
+
+#background {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+#three-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
+#scene-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+#scene-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+}
+
+#tv-screen {
+    position: absolute;
+    z-index: 10;
+    /* @tweakable TV screen width for overlay positioning */
+    width: 200px;
+    /* @tweakable TV screen height for overlay positioning */
+    height: 150px;
+    /* @tweakable TV screen background color */
+    background: #000;
+    /* @tweakable TV screen border width */
+    border: 3px solid #2a2a2a;
+    /* @tweakable TV screen border radius */
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 
+        0 0 20px rgba(0, 0, 0, 0.8),
+        inset 0 0 10px rgba(255, 255, 255, 0.1);
+    /* @tweakable TV screen vertical position percentage */
+    top: 38%;
+    /* @tweakable TV screen horizontal position percentage */
+    left: 50%;
+    /* @tweakable TV screen horizontal offset */
+    --offset-x: -50%;
+    /* @tweakable TV screen vertical offset */
+    --offset-y: -50%;
+    transform: translate(var(--offset-x), var(--offset-y));
+    pointer-events: auto;
+    cursor: move;
+}
+
+#music-video, #youtube-container iframe {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.character-canvas {
+    display: none;
+}
+
+#beavis-canvas {
+    bottom: 80px;
+    left: 25%;
+    transform-origin: bottom center;
+}
+
+#butthead-canvas {
+    bottom: 80px;
+    right: 25%;
+    transform-origin: bottom center;
+}
+
+.character-canvas:hover {
+    transform: scale(1.1);
+}
+
+.character-canvas.talking {
+    animation: bounce 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes bounce {
+    0% { transform: translateY(0px); }
+    100% { transform: translateY(-10px); }
+}
+
+#speech-bubbles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.speech-bubble {
+    position: absolute;
+    /* @tweakable speech bubble background color */
+    background: rgba(255, 255, 255, 0.95);
+    /* @tweakable speech bubble text color */
+    color: #333;
+    /* @tweakable speech bubble padding */
+    padding: 15px 20px;
+    /* @tweakable speech bubble border radius */
+    border-radius: 20px;
+    /* @tweakable speech bubble maximum width */
+    max-width: 250px;
+    font-weight: bold;
+    /* @tweakable speech bubble shadow */
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: translateY(20px);
+    /* @tweakable speech bubble transition duration */
+    transition: all 0.3s ease;
+}
+
+.speech-bubble.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 30px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid rgba(255, 255, 255, 0.95);
+}
+
+#beavis-bubble {
+    bottom: 180px;
+    left: 10%;
+}
+
+#butthead-bubble {
+    bottom: 180px;
+    right: 10%;
+}
+
+#commentary-panel {
+    /* @tweakable commentary panel background */
+    background: rgba(0, 0, 0, 0.9);
+    /* @tweakable commentary panel padding */
+    padding: 20px;
+    /* @tweakable commentary panel maximum height */
+    max-height: 300px;
+    overflow-y: auto;
+    backdrop-filter: blur(10px);
+}
+
+#commentary-log {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    border: 1px solid rgba(255, 107, 53, 0.3);
+    border-radius: 8px;
+    padding: 10px;
+    background: rgba(255, 107, 53, 0.05);
+}
+
+.commentary-item {
+    margin-bottom: 10px;
+    padding: 8px;
+    border-left: 3px solid #ff6b35;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+}
+
+.commentary-timestamp {
+    font-size: 0.8em;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 5px;
+}
+
+.commentary-text {
+    line-height: 1.4;
+}
+
+.character-name {
+    font-weight: bold;
+    color: #ff6b35;
+}
+
+.commentary-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+#auto-mode[data-active="true"] {
+    background: #28a745;
+}
+
+#auto-mode[data-active="true"]:hover {
+    background: #218838;
+}
+
+#loading-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 107, 53, 0.3);
+    border-top: 4px solid #ff6b35;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .controls-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .video-input-section, .session-controls {
+        justify-content: center;
+    }
+
+    #youtube-url {
+        min-width: 200px;
+    }
+
+    #tv-screen {
+        width: 300px;
+        height: 225px;
+    }
+
+    .character {
+        width: 100px;
+    }
+
+    #beavis {
+        left: 10%;
+    }
+
+    #butthead {
+        right: 10%;
+    }
+
+    .speech-bubble {
+        max-width: 200px;
+        padding: 10px 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    #tv-screen {
+        width: 250px;
+        height: 188px;
+    }
+
+    .character {
+        width: 80px;
+    }
+
+    .speech-bubble {
+        max-width: 150px;
+        font-size: 0.9em;
+    }
+}
+
+/* Uploaded photo assets positioning */
+.photo-asset {
+    position: absolute;
+    z-index: 2;
+    pointer-events: auto;
+    /* @tweakable all photo assets opacity */
+    opacity: 0.8;
+    /* @tweakable all photo assets scale multiplier */
+    transform: scale(1.0);
+    /* @tweakable all photo assets visibility toggle */
+    display: block;
+    cursor: move;
+    user-select: none;
+}
+
+.beavis-skull-tshirt {
+    /* @tweakable Beavis skull t-shirt width */
+    width: 80px;
+    /* @tweakable Beavis skull t-shirt height */
+    height: auto;
+    /* @tweakable Beavis skull t-shirt bottom position */
+    bottom: 40px;
+    /* @tweakable Beavis skull t-shirt left position percentage */
+    left: 10%;
+    /* @tweakable Beavis skull t-shirt visibility */
+    display: block;
+}
+
+.beavis-scared {
+    /* @tweakable Beavis scared width */
+    width: 70px;
+    /* @tweakable Beavis scared height */
+    height: auto;
+    /* @tweakable Beavis scared top position percentage */
+    top: 25%;
+    /* @tweakable Beavis scared left position percentage */
+    left: 8%;
+    /* @tweakable Beavis scared visibility */
+    display: block;
+}
+
+.beavis-skeleton-flames {
+    /* @tweakable Beavis skeleton flames width */
+    width: 70px;
+    /* @tweakable Beavis skeleton flames height */
+    height: auto;
+    /* @tweakable Beavis skeleton flames bottom position percentage */
+    bottom: 20%;
+    /* @tweakable Beavis skeleton flames right position percentage */
+    right: 15%;
+    /* @tweakable Beavis skeleton flames visibility */
+    display: block;
+}
+
+.whisk-gif {
+    /* @tweakable Whisk GIF width */
+    width: 60px;
+    /* @tweakable Whisk GIF height */
+    height: auto;
+    /* @tweakable Whisk GIF top position percentage */
+    top: 35%;
+    /* @tweakable Whisk GIF right position percentage */
+    right: 12%;
+    /* @tweakable Whisk GIF visibility */
+    display: block;
+}
+
+.butthead-photo {
+    /* @tweakable Butthead photo width */
+    width: 120px;
+    /* @tweakable Butthead photo height */
+    height: auto;
+    /* @tweakable Butthead photo bottom position */
+    bottom: 60px;
+    /* @tweakable Butthead photo right position percentage */
+    right: 20%;
+    /* @tweakable Butthead photo visibility */
+    display: block;
+}
+
+.beavis-photo {
+    /* @tweakable Beavis photo width */
+    width: 100px;
+    /* @tweakable Beavis photo height */
+    height: auto;
+    /* @tweakable Beavis photo bottom position */
+    bottom: 80px;
+    /* @tweakable Beavis photo left position percentage */
+    left: 15%;
+    /* @tweakable Beavis photo visibility */
+    display: block;
+}
+
+.websim-gif {
+    /* @tweakable Websim GIF width */
+    width: 80px;
+    /* @tweakable Websim GIF height */
+    height: auto;
+    /* @tweakable Websim GIF top position percentage */
+    top: 20%;
+    /* @tweakable Websim GIF right position percentage */
+    right: 10%;
+    /* @tweakable Websim GIF visibility */
+    display: block;
+}
+
+/* New drag and drop styles */
+.draggable {
+    /* @tweakable draggable element border when selected */
+    border: 2px dashed transparent;
+    position: relative;
+    /* @tweakable draggable cursor for left-click drag */
+    cursor: move;
+}
+
+.draggable.selected {
+    /* @tweakable selected draggable element border color */
+    border-color: #ff6b35;
+    /* @tweakable selected draggable cursor for right-click scale */
+    cursor: crosshair;
+}
+
+.draggable.dragging {
+    /* @tweakable dragging element opacity */
+    opacity: 0.7;
+    /* @tweakable dragging element z-index */
+    z-index: 1000;
+}
+
+.resize-handle {
+    display: none; /* Hide resize handles since we're using right-click scaling */
+}
+
+.drop-zone.active {
+    /* @tweakable active drop zone border color */
+    border-color: #00ff00 !important;
+    /* @tweakable active drop zone background overlay */
+    background: rgba(0, 255, 0, 0.1);
+}

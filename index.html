@@ -1,0 +1,76 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beavis & Butt-Head: Music Video Commentary</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://esm.sh/three@0.158.0",
+            "three/addons/": "https://esm.sh/three@0.158.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="app">
+        <header class="controls-header">
+            <div class="video-input-section">
+                <input type="text" id="youtube-url" placeholder="Enter YouTube URL..." />
+                <button id="load-youtube">Load YouTube</button>
+                <input type="file" id="video-upload" accept="video/*" />
+                <label for="video-upload" class="upload-btn">Upload Video</label>
+            </div>
+            <div class="session-controls">
+                <button id="download-log">Download Commentary</button>
+                <button id="clear-session">Clear Session</button>
+                <span id="roast-counter">Roasts: 0 | Praise: 0</span>
+            </div>
+        </header>
+
+        <div id="scene-container">
+            <img id="background" src="/living-room-bg.png" />
+            <canvas id="three-canvas"></canvas>
+            
+            <!-- Photo assets -->
+            <img src="/butthead.webp" class="photo-asset butthead-photo" alt="Butthead" />
+            <img src="/beavis.png" class="photo-asset beavis-photo" alt="Beavis" />
+            <img src="/websim.gif" class="photo-asset websim-gif" alt="Websim animation" />
+            
+            <div id="tv-screen">
+                <video id="music-video" controls crossorigin="anonymous">
+                    <source src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div id="youtube-container" style="display: none;"></div>
+            </div>
+            
+            <div id="speech-bubbles">
+                <div id="beavis-bubble" class="speech-bubble">
+                    <div class="bubble-text"></div>
+                </div>
+                <div id="butthead-bubble" class="speech-bubble">
+                    <div class="bubble-text"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="commentary-panel">
+            <div id="commentary-log"></div>
+            <div class="commentary-controls">
+                <button id="trigger-comment">Make Comment</button>
+                <button id="auto-mode" data-active="false">Auto Mode: OFF</button>
+                <button id="mute-voices">🔊 Voices</button>
+            </div>
+        </div>
+
+        <div id="loading-indicator" style="display: none;">
+            <div class="spinner"></div>
+            <p>Generating commentary...</p>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
