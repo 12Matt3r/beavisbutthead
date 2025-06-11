@@ -39,6 +39,23 @@ class BeavisAndButtHeadCommentary {
     }
 
     async init() {
+        this.apiKeyMissing = false; // Initialize the flag
+        if (this.elevenLabsApiKey === 'YOUR_ELEVENLABS_API_KEY') {
+            this.apiKeyMissing = true;
+            console.warn(
+                '%cWARNING: ElevenLabs API Key is not set!',
+                'color: yellow; font-weight: bold; font-size: 16px;'
+            );
+            console.warn(
+                'Please replace "YOUR_ELEVENLABS_API_KEY" in app.js with your actual ElevenLabs API key.'
+            );
+            console.warn(
+                'You can obtain an API key from https://elevenlabs.io/'
+            );
+            console.info('Voice functionality will be disabled until the API key is provided.');
+            this.voicesEnabled = false;
+        }
+
         await this.setup3DEnvironment();
         this.bindEvents();
         this.setupDragAndDrop();
@@ -190,6 +207,14 @@ class BeavisAndButtHeadCommentary {
         document.getElementById('mute-voices').addEventListener('click', (e) => {
             this.toggleVoices(e.target);
         });
+
+        if (this.apiKeyMissing) {
+            const voicesButton = document.getElementById('mute-voices');
+            if (voicesButton) {
+                voicesButton.textContent = 'Voices (Disabled - API Key Needed)';
+                voicesButton.disabled = true;
+            }
+        }
 
         // Session controls
         document.getElementById('download-log').addEventListener('click', () => {
@@ -519,6 +544,26 @@ class BeavisAndButtHeadCommentary {
         this.showLoading(true);
         this.lastCommentTime = Date.now();
 
+        // Check if websim and its nested properties are defined
+        if (typeof websim === 'undefined' || !websim.chat || !websim.chat.completions || !websim.chat.completions.create) {
+            console.error(
+                "ERROR: LLM API (websim) is not defined or not properly configured."
+            );
+            console.info(
+                "This application uses a placeholder 'websim' for Large Language Model (LLM) API calls."
+            );
+            console.info(
+                "Please integrate your actual LLM SDK or API call by replacing 'websim.chat.completions.create(...)' in app.js."
+            );
+            console.info(
+                "Suggestion: Replace 'websim.chat.completions.create(...)' with your chosen LLM API call (e.g., OpenAI, Anthropic, Gemini, or a custom local model)."
+            );
+
+            this.showSpeechBubble('butthead', "Uhuhuhuh, my brain ain't workin'. Tell the nerd who made this to fix the comment thingy.");
+            this.showLoading(false);
+            return; // Prevent further execution
+        }
+
         try {
             const context = this.buildContext();
                         const maxLines = 8;
@@ -553,7 +598,7 @@ class BeavisAndButtHeadCommentary {
             
         } catch (error) {
             console.error('Error generating comment:', error);
-            this.showSpeechBubble('butthead', "Uhuhuhuh, something's broken. That's not cool.");
+            this.showSpeechBubble('butthead', "Uhuhuhuh, that was, like, dumb. Try again or something.");
         }
         
         this.showLoading(false);
@@ -643,8 +688,8 @@ class BeavisAndButtHeadCommentary {
                         audio.volume = 0.9;
             return audio;
         } catch (err) {
-            console.error("Beavis TTS error:", err);
-            throw err;
+            console.error("Error in speakBeavis TTS fetch/blob processing:", err); // More specific
+            throw err; // Re-throw for speakLine to handle
         }
     }
 
@@ -676,8 +721,8 @@ class BeavisAndButtHeadCommentary {
                         audio.volume = 0.9;
             return audio;
         } catch (err) {
-            console.error("Butt-Head TTS error:", err);
-            throw err;
+            console.error("Error in speakButthead TTS fetch/blob processing:", err); // More specific
+            throw err; // Re-throw for speakLine to handle
         }
     }
 
@@ -763,28 +808,29 @@ class BeavisAndButtHeadCommentary {
                         this.currentAudio = null;
                     });
                     
-                    this.currentAudio.addEventListener('error', (error) => {
-                        console.error('Audio playback error:', error);
+                    this.currentAudio.addEventListener('error', (audioError) => {
+                        console.error('Audio playback error event for currentAudio:', audioError);
+                        // Use a Beavis quote for audio playback specific errors
+                        this.showSpeechBubble('beavis', "Heh heh. The sound thingy, like, messed up.");
                         this.restoreVideoVolume();
-                        this.currentAudio = null;
-                        // Fallback to text-only mode
-                        setTimeout(() => {
-                            this.restoreVideoVolume();
-                        }, 3000);
+                        this.currentAudio = null; // Already paused/null by this point or erroring
                     });
                 } else {
-                    throw new Error('No audio received from ElevenLabs TTS service');
+                    // This case means this.speak() returned null or undefined, which is an error.
+                    throw new Error('No audio object was created or returned from this.speak()');
                 }
                 
-            } catch (error) {
-                console.error('ElevenLabs TTS Error:', error);
-                // Show fallback message
-                this.showSpeechBubble(character, `[TTS Error] ${text}`);
-                setTimeout(() => {
-                    this.restoreVideoVolume();
-                }, 3000);
+            } catch (error) { // Catches errors from this.speak() or if this.currentAudio is null/undefined initially
+                console.error('General ElevenLabs TTS Error in speakLine:', error);
+                this.showSpeechBubble('beavis', "Heh heh. It's like, broken or something."); // Generic Beavis error
+                this.restoreVideoVolume();
+                if (this.currentAudio) { // Ensure currentAudio is handled if it exists
+                    this.currentAudio.pause();
+                    this.currentAudio = null;
+                }
             }
         } else {
+            // If voices are disabled, still ensure volume is restored after a delay
             setTimeout(() => {
                 this.restoreVideoVolume();
             }, 3000);
@@ -871,6 +917,13 @@ class BeavisAndButtHeadCommentary {
     }
 
     toggleVoices(button) {
+        if (this.apiKeyMissing) {
+            // Keep voices disabled if API key is missing
+            this.voicesEnabled = false;
+            button.textContent = 'Voices (Disabled - API Key Needed)';
+            button.disabled = true;
+            return;
+        }
         this.voicesEnabled = !this.voicesEnabled;
         button.textContent = this.voicesEnabled ? '🔊 Voices' : '🔇 Voices';
     }
