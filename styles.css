@@ -583,3 +583,37 @@ button:disabled, .upload-btn:disabled {
     /* @tweakable active drop zone box shadow for inset effect */
     box-shadow: inset 0 0 15px rgba(255, 107, 53, 0.3);
 }
+
+/* Background Selection UI */
+.background-selection {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 5px;
+    background: rgba(0,0,0,0.3); /* Optional background for the group */
+    border-radius: 5px;
+    margin-left: auto; /* Pushes it to the right if space allows */
+}
+
+.background-selection button {
+    padding: 6px 10px;
+    font-size: 0.9em;
+    /* @tweakable background selection button background */
+    background: #4a4a4a;
+    /* @tweakable background selection button text color */
+    color: #ddd;
+    /* Inherits general button styles like border-radius, cursor, transition if not overridden */
+}
+
+.background-selection button:hover {
+    /* @tweakable background selection button hover background */
+    background: #6a6a6a;
+    transform: translateY(-1px); /* Less pronounced hover effect */
+}
+
+.background-selection button.active-bg {
+    /* @tweakable active background button style */
+    background: #ff6b35; /* Highlight active background */
+    color: white;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.4);
+}

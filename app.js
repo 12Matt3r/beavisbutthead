@@ -19,6 +19,38 @@ class BeavisAndButtHeadCommentary {
         this.buttheadBaseRotation = null;
         this.beavisBasePosition = null;
         this.buttheadBasePosition = null;
+
+        this.isCornholioMode = false;
+        this.cornholioTimeoutId = null;
+        this.cornholioCommentCount = 0;
+        this.cornholioMaxComments = 2; // Beavis says 2 lines as Cornholio
+        this.cornholioDuration = 30000; // 30 seconds max for mode
+
+        this.backgrounds = [
+            { name: "Living Room", url: "/living-room-bg.png" },
+            { name: "Outer Space", url: "/placeholder-bg-space.png" },
+            { name: "Rock Stage", url: "/placeholder-bg-stage.png" }
+        ];
+        this.defaultBackgroundUrl = "/living-room-bg.png";
+
+        this.videoLoadComments = [
+            { butthead: "Uhuhuhuh, alright! Let's see what kind of crap this is gonna be.", beavis: "Yeah! Yeah! This better not suck!" },
+            { butthead: "Huh huh. Wonder if this video is gonna be cool.", beavis: "More TV! More TV!" },
+            { butthead: "Alright, new video. Try not to break the TV, Beavis.", beavis: "Heh heh. Break it! Break it!" }
+        ];
+
+        this.lastPausePlayCommentTime = 0;
+        this.pausePlayCommentCooldown = 15000; // 15 seconds
+        this.pauseComments = [
+            { character: 'butthead', text: "Huh. Paused." },
+            { character: 'beavis', text: "Hey, why'd it stop?!" },
+            { character: 'butthead', text: "Uh, did you, like, do that on purpose?" }
+        ];
+        this.playComments = [
+            { character: 'beavis', text: "Yeah! Play it!" },
+            { character: 'butthead', text: "And now, like, it's playing again. Huh huh." },
+            { character: 'beavis', text: "Go! Go! Go!" }
+        ];
         
         // 3D Scene setup - now main scene instead of separate character scenes
         this.scene = null;
@@ -63,10 +95,22 @@ class BeavisAndButtHeadCommentary {
         }
 
         await this.setup3DEnvironment();
-        this.bindEvents();
+        this.bindEvents(); // Background buttons are created/bound here
         this.setupDragAndDrop();
         this.startAutoCommentary();
         this.showWelcomeMessage();
+
+        // Load saved background or default
+        const savedBgUrl = localStorage.getItem('selectedBackgroundUrl');
+        // Check if savedBgUrl is valid among the defined backgrounds
+        const initialBgUrl = this.backgrounds.some(bg => bg.url === savedBgUrl) ? savedBgUrl : this.defaultBackgroundUrl;
+        this.setBackground(initialBgUrl);
+        // Ensure updateBackgroundButtons is called after buttons are created in bindEvents.
+        // This might be better called at the end of bindEvents or if buttons are static HTML.
+        // For now, let's assume dynamic buttons are created before this if init calls bindEvents first.
+        // If bindEvents is called after this part of init, then updateBackgroundButtons needs to be called in bindEvents.
+        // Based on current order (bindEvents before this), this should be fine.
+        this.updateBackgroundButtons(initialBgUrl);
     }
 
     async setup3DEnvironment() {
@@ -207,6 +251,12 @@ class BeavisAndButtHeadCommentary {
                 // For now, relying on speakLine's animation.
             } else if (this.beavisState === 'listening') {
                  // This state is handled by setInterval in speakLine for more complex animation.
+            } else if (this.beavisState === 'cornholio') {
+                const time = animTime * 0.020; // Very fast
+                this.beavisModel.rotation.x = this.beavisBaseRotation.x + Math.sin(time * 1.5) * 0.4; // Wild nodding/tilting
+                this.beavisModel.rotation.y = this.beavisBaseRotation.y + Math.sin(time) * 0.5;     // Spinning
+                this.beavisModel.rotation.z = this.beavisBaseRotation.z + Math.cos(time * 1.2) * 0.3; // Side tilt
+                this.beavisModel.position.y = this.beavisBasePosition.y + Math.abs(Math.sin(time * 0.8)) * 0.15; // Bouncing higher
             } else if (this.beavisState === 'idle') {
                 const idleSpeed = 0.001;
                 this.beavisModel.rotation.y = this.beavisBaseRotation.y + Math.sin(animTime * idleSpeed * 0.7) * 0.05;
@@ -287,10 +337,91 @@ class BeavisAndButtHeadCommentary {
         });
 
         // Video events
+        const musicVideoElement = document.getElementById('music-video');
+        if (musicVideoElement) {
+            musicVideoElement.addEventListener('loadedmetadata', () => {
+                this.onVideoLoaded();
+            });
+            musicVideoElement.addEventListener('pause', () => this.handleVideoPause());
+            musicVideoElement.addEventListener('play', () => this.handleVideoPlay());
+        }
+
+        // Background selector buttons
+        const bgSelectorContainer = document.getElementById('background-selector-container');
+        if (bgSelectorContainer) {
+            // Clear any existing buttons first (e.g., if re-binding or hot-reloading)
+            bgSelectorContainer.innerHTML = '';
+            this.backgrounds.forEach(bg => {
+                const button = document.createElement('button');
+                button.textContent = bg.name;
+                button.dataset.bg = bg.url;
+                button.addEventListener('click', () => {
+                    this.setBackground(bg.url);
+                    this.updateBackgroundButtons(bg.url);
+                });
+                bgSelectorContainer.appendChild(button);
+            });
+        }
+    }
+
+    setBackground(bgUrl) {
+        const backgroundElement = document.getElementById('background');
+        if (backgroundElement) {
+            backgroundElement.src = bgUrl;
+            localStorage.setItem('selectedBackgroundUrl', bgUrl);
+        }
+    }
+
+    updateBackgroundButtons(activeBgUrl) {
+       const buttons = document.querySelectorAll('.background-selection button');
+       buttons.forEach(button => {
+           if (button.dataset.bg === activeBgUrl) {
+               button.classList.add('active-bg');
+           } else {
+               button.classList.remove('active-bg');
+           }
+       });
+    }
+
+    handleVideoPause() {
+        if (Date.now() - this.lastPausePlayCommentTime < this.pausePlayCommentCooldown) return;
+        // Only comment if the video was actually playing (not paused at the start or already paused)
         const video = document.getElementById('music-video');
-        video.addEventListener('loadedmetadata', () => {
-            this.onVideoLoaded();
-        });
+        if (video && !video.paused && video.duration > 0 && !video.ended) { // Check if it was playing
+             // This check is tricky because event fires *after* pause.
+             // A better check might be to see if it's not at the beginning or end.
+             // For now, a simple random chance if not in cooldown.
+        }
+        // The above check is problematic for 'pause' event.
+        // Let's assume if pause event fires, it's a valid time to comment if cooldown allows.
+        // However, we should avoid commenting if the video source is not loaded yet or if it ended.
+        if (video && video.readyState < 2) return; // Not enough data to play/pause meaningfully
+        if (video && video.ended) return; // Don't comment if video ended and implicitly paused.
+        // Also, ensure it's not a synthetic pause event when loading a new video.
+        // This might be hard to distinguish perfectly. Let's rely on cooldown primarily.
+
+
+        if (Math.random() < 0.3) { // 30% chance
+            const comment = this.pauseComments[Math.floor(Math.random() * this.pauseComments.length)];
+            this.showSpeechBubble(comment.character, comment.text);
+            this.lastPausePlayCommentTime = Date.now();
+        }
+    }
+
+    handleVideoPlay() {
+        if (Date.now() - this.lastPausePlayCommentTime < this.pausePlayCommentCooldown) return;
+
+        const video = document.getElementById('music-video');
+        // Don't comment on initial play or if video source not ready
+        if (video && video.currentTime < 1 && video.readyState >= 2) return;
+        if (video && video.readyState < 2) return;
+
+
+        if (Math.random() < 0.3) { // 30% chance
+            const comment = this.playComments[Math.floor(Math.random() * this.playComments.length)];
+            this.showSpeechBubble(comment.character, comment.text);
+            this.lastPausePlayCommentTime = Date.now();
+        }
     }
 
     setupDragAndDrop() {
@@ -604,10 +735,13 @@ class BeavisAndButtHeadCommentary {
     }
 
     onVideoLoaded() {
-        this.showSpeechBubble('butthead', "Uhuhuhuh, alright! Let's see what kind of crap this is gonna be.");
-        setTimeout(() => {
-            this.showSpeechBubble('beavis', "Yeah! Yeah! This better not suck!");
-        }, 2000);
+        if (this.videoLoadComments && this.videoLoadComments.length > 0) {
+            const selectedPair = this.videoLoadComments[Math.floor(Math.random() * this.videoLoadComments.length)];
+            this.showSpeechBubble('butthead', selectedPair.butthead);
+            setTimeout(() => {
+                this.showSpeechBubble('beavis', selectedPair.beavis);
+            }, 2000);
+        }
     }
 
     async generateComment() {
@@ -693,10 +827,14 @@ Current session context:
 
     buildContext() {
         const videoInfo = this.currentVideoTitle ? `watching "${this.currentVideoTitle}"` : 'watching a video';
-        const sessionContext = this.conversationLog.length > 5 ? 
+        const sessionContext = this.conversationLog.length > 5 ?
             'We\'ve been watching for a while now.' : 'Just started watching.';
-        
-                const additionalContext = [
+
+        if (this.isCornholioMode) {
+            return `Beavis, in his Cornholio persona (hyperactive, demanding TP for his bunghole, asking "Are you threatening me?"), and Butt-Head are ${videoInfo}. ${sessionContext} Generate their commentary, focusing on Cornholio's current needs and perspective. Butt-Head should react to Cornholio.`;
+        }
+
+        const additionalContext = [
             'They\'re sitting on their couch being lazy as usual.',
             'The TV is probably showing something stupid.',
             'They might complain about being bored or hungry.',
@@ -708,8 +846,7 @@ Current session context:
 
     async processDialogue(dialogue) {
         const lines = dialogue.split('\n').filter(line => line.trim());
-        
-                const lineDelay = 3000;
+        const lineDelay = 3000; // Corrected: was misindented in original provided snippet
         
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
@@ -721,16 +858,33 @@ Current session context:
                 const text = match[2];
                 const lowerText = text.toLowerCase();
 
+                if (character === 'beavis' && !this.isCornholioMode) {
+                    if ((lowerText.includes('tp') && lowerText.includes('bunghole')) || lowerText.includes('bungholio') || lowerText.includes('cornholio')) {
+                        this.isCornholioMode = true;
+                        this.beavisState = 'cornholio';
+                        this.cornholioCommentCount = 0;
+                        clearTimeout(this.cornholioTimeoutId);
+                        this.cornholioTimeoutId = setTimeout(() => {
+                            this.isCornholioMode = false;
+                            if (this.beavisState === 'cornholio') {
+                                this.beavisState = 'idle';
+                            }
+                            console.log("Cornholio mode DEACTIVATED (timer).");
+                        }, this.cornholioDuration);
+                        console.log("Cornholio mode ACTIVATED!");
+                    }
+                }
+
                 const flags = {
                     isFire: lowerText.includes('fire') || lowerText.includes('burn'),
-                    isSucks: lowerText.includes('suck'), // Covers sucks, sucked, etc.
+                    isSucks: lowerText.includes('suck'),
                     isCool: lowerText.includes('cool') || lowerText.includes('awesome')
                 };
                 
                 await this.speakLine(character, text, flags);
                 this.logComment(line);
                 
-                // Enhanced stats tracking for roasts and praise
+                // Enhanced stats tracking for roasts and praise (ensure lowerText is defined for this scope)
                                 const roastKeywords = ['suck', 'lame', 'stupid', 'dumb', 'crap', 'buttmunch'];
                                 const praiseKeywords = ['cool', 'awesome', 'kick ass', 'rocks', 'rules'];
                 
@@ -840,35 +994,49 @@ Current session context:
         const listenerModel = character === 'butthead' ? this.beavisModel : this.buttheadModel;
 
         // Set character states based on flags and character
-        let isSpecialStateSet = false;
-        const specialAnimationDuration = 1500; // 1.5 seconds for special animations
+        let isSpecialStateSet = false; // This will determine if a special-to-talking timeout is needed
+        const specialAnimationDuration = 1500;
 
-        if (character === 'beavis') {
-            if (flags.isFire) {
-                this.beavisState = 'special_fire';
-                isSpecialStateSet = true;
-            } else if (flags.isCool) {
-                this.beavisState = 'special_cool';
-                isSpecialStateSet = true;
-            } else {
-                this.beavisState = 'talking';
+        if (this.isCornholioMode && character === 'beavis') {
+            this.beavisState = 'cornholio';
+            this.cornholioCommentCount++;
+            if (this.cornholioCommentCount >= this.cornholioMaxComments) {
+                this.isCornholioMode = false;
+                clearTimeout(this.cornholioTimeoutId);
+                this.beavisState = 'talking'; // Transition to talking after last Cornholio comment
+                console.log("Cornholio mode DEACTIVATED (comment limit).");
             }
-            this.buttheadState = 'listening'; // Butt-Head is always listening when Beavis speaks
-        } else if (character === 'butthead') {
-            if (flags.isSucks) {
-                this.buttheadState = 'special_sucks';
-                isSpecialStateSet = true;
-            } else if (flags.isCool) {
-                this.buttheadState = 'special_cool';
-                isSpecialStateSet = true;
-            } else {
-                this.buttheadState = 'talking';
+            // No other state (like 'special_fire') applies if Beavis is Cornholio
+        } else {
+            // Regular state setting if not Cornholio or not Beavis
+            if (character === 'beavis') {
+                if (flags.isFire) {
+                    this.beavisState = 'special_fire';
+                    isSpecialStateSet = true;
+                } else if (flags.isCool) {
+                    this.beavisState = 'special_cool';
+                    isSpecialStateSet = true;
+                } else {
+                    this.beavisState = 'talking';
+                }
+                this.buttheadState = 'listening';
+            } else if (character === 'butthead') {
+                if (flags.isSucks) {
+                    this.buttheadState = 'special_sucks';
+                    isSpecialStateSet = true;
+                } else if (flags.isCool) {
+                    this.buttheadState = 'special_cool';
+                    isSpecialStateSet = true;
+                } else {
+                    this.buttheadState = 'talking';
+                }
+                this.beavisState = 'listening';
             }
-            this.beavisState = 'listening'; // Beavis is always listening when Butt-Head speaks
         }
 
-        if (isSpecialStateSet) {
+        if (isSpecialStateSet && !(this.isCornholioMode && character === 'beavis')) { // Don't run this timeout if Cornholio is active and just spoke
             setTimeout(() => {
+                // Only transition to 'talking' if still in that special state
                 if (character === 'beavis' && (this.beavisState === 'special_fire' || this.beavisState === 'special_cool')) {
                     this.beavisState = 'talking';
                 } else if (character === 'butthead' && (this.buttheadState === 'special_sucks' || this.buttheadState === 'special_cool')) {
@@ -934,9 +1102,19 @@ Current session context:
                     listenerModel.rotation.copy(listenerOriginalRotation);
                 }
             }
-            // Reset states to idle after animation finishes
-            this.beavisState = 'idle';
-            this.buttheadState = 'idle';
+            // Reset states after animation finishes
+            if (this.beavisState !== 'cornholio' || !this.isCornholioMode) {
+                // If Beavis is not supposed to be Cornholio (either not in the state or mode ended), set to idle.
+                this.beavisState = 'idle';
+            }
+            // If Cornholio mode is active and beavisState is 'cornholio', he remains 'cornholio'.
+            // The separate this.cornholioTimeoutId is responsible for eventually setting him to 'idle' from 'cornholio'.
+
+            // Butt-Head always goes to idle.
+            if (this.buttheadState !== 'idle') {
+                this.buttheadState = 'idle';
+            }
+
         }, animationDuration);
         
         // ElevenLabs TTS with enhanced error handling
