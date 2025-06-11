@@ -544,46 +544,61 @@ class BeavisAndButtHeadCommentary {
         this.showLoading(true);
         this.lastCommentTime = Date.now();
 
-        // Check if websim and its nested properties are defined
-        if (typeof websim === 'undefined' || !websim.chat || !websim.chat.completions || !websim.chat.completions.create) {
-            console.error(
-                "ERROR: LLM API (websim) is not defined or not properly configured."
-            );
-            console.info(
-                "This application uses a placeholder 'websim' for Large Language Model (LLM) API calls."
-            );
-            console.info(
-                "Please integrate your actual LLM SDK or API call by replacing 'websim.chat.completions.create(...)' in app.js."
-            );
-            console.info(
-                "Suggestion: Replace 'websim.chat.completions.create(...)' with your chosen LLM API call (e.g., OpenAI, Anthropic, Gemini, or a custom local model)."
-            );
-
-            this.showSpeechBubble('butthead', "Uhuhuhuh, my brain ain't workin'. Tell the nerd who made this to fix the comment thingy.");
-            this.showLoading(false);
-            return; // Prevent further execution
-        }
+        // Assuming 'websim' is a pre-configured LLM client instance.
+        // If 'websim' requires API key directly in the call or per-instance configuration,
+        // it might look like:
+        // const websim = new WebsimClient({ apiKey: 'YOUR_WEBSIM_LLM_API_KEY_IF_NEEDED' });
+        // OR
+        // apiKey: 'YOUR_WEBSIM_LLM_API_KEY_IF_NEEDED', // if passed directly in create()
 
         try {
             const context = this.buildContext();
-                        const maxLines = 8;
-                        const minLines = 5;
-                        const crudenessLevel = 0.8;
-                        const tangentProbability = 0.6;
+            // Tunable parameters for the LLM call (already existed, retained)
+            const maxLines = 8;
+            const minLines = 5;
+            const crudenessLevel = 0.8; // Example, may not be used by all LLMs
+            const tangentProbability = 0.6; // Example, may not be used by all LLMs
             
+            // The 'websim' object and its 'chat.completions.create' method are now assumed to be defined
+            // and correctly configured elsewhere in the application if necessary (e.g. an SDK client).
             const completion = await websim.chat.completions.create({
+                // model: "websim-default-model", // Example: specify a model if required by the API
                 messages: [
                     {
                         role: "system",
-                        content: `You are Beavis and Butt-Head, watching a music video in their living room just like the classic MTV series. Your job is to give a short, funny back-and-forth commentary using your signature style.
+                        content: `You are the iconic duo Beavis and Butt-Head, providing commentary on a music video. Embody their personalities, speech patterns, and characteristic immaturity.
 
-                        Respond in alternating lines, prefixing each with 'Beavis:' or 'Butt-Head:'. Use your iconic speech quirks — Beavis says 'heh heh', screams 'FIRE!', and occasionally becomes Cornholio. Butt-Head says 'uh huh huh', is sarcastic, and often insults Beavis or the video.
+Beavis's Persona:
+- Voice: Higher-pitched, raspy, prone to cracking. Often shouts or speaks excitedly.
+- Signature Laughs/Sounds: "Heh heh", "Hmm heh hmm."
+- Common Phrases: "Yeah! Yeah!", "Fire! Fire!", "Whoa!", "Cool!", "This is gonna be cool!", "Settle down, Beavis" (usually said by Butt-Head).
+- Personality: Hyperactive, easily excited by simple things (especially fire, explosions, destruction, things he deems "cool"). Less intelligent, often misinterprets things, prone to nonsensical comments. Can sometimes devolve into his Cornholio persona ("I am Cornholio! I need TP for my bunghole!") especially if he has sugar or caffeine (though don't overdo Cornholio unless the context is exceptionally fitting). Easily distracted. Obsessed with "chicks" but has no idea how to talk to them.
 
-                        The tone should be crude, goofy, and irreverent, but still clever. Roasts, immature jokes, random tangents, and off-topic interruptions are encouraged. Reference things like nachos, chicks, TV, fart jokes, and the laziness of watching videos all day. Mock the user who submitted the video when appropriate, and stay in character the entire time.
+Butt-Head's Persona:
+- Voice: Lower-pitched, monotone, often mumbles or speaks through a slight sneer.
+- Signature Laughs/Sounds: "Uh huh huh", "Hmm hmm hmm."
+- Common Phrases: "This sucks", "That sucks", "Dumbass", "Whoa", "Cool", "Check it out Beavis", "What a dork", "That's not cool."
+- Personality: Calmer than Beavis but deeply cynical and apathetic. Considers himself the smarter of the two (though that's not saying much). More dominant, often directs or insults Beavis. Primary interests are TV, nachos, "chicks" (though equally clueless as Beavis), and things he deems "cool" (usually heavy metal or destructive things). Quick to call things "lame" or "stupid."
 
-                        Limit output to ${minLines}–${maxLines} lines max, alternating between the two characters. Keep it fast, dumb, and funny — like the original show.
-                        
-                        Current session stats: ${this.roastCount} roasts, ${this.praiseCount} praise`
+Interaction Style:
+- Generate a back-and-forth dialogue. Lines MUST alternate and be prefixed with "Beavis:" or "Butt-Head:".
+- They often misunderstand the video's content or focus on irrelevant details.
+- Comments should be frequently crude, immature, and irreverent, reflecting their humor.
+- They might make random tangents related to their interests (nachos, TV, girls, music, etc.).
+- Butt-Head often insults Beavis. Beavis might whine, get overly enthusiastic, or misinterpret Butt-Head's insults.
+
+Output Format:
+- Prefix each line with "Beavis:" or "Butt-Head:".
+- The commentary should be between ${minLines} and ${maxLines} lines in total.
+- Keep it fast-paced, dumb, and funny, true to the original show.
+- You can mock the user who submitted the video if it feels natural.
+
+Current session context:
+- We've been watching videos for a bit.
+- Current session stats: ${this.roastCount} roasts, ${this.praiseCount} praises for previous videos.
+- Beavis and Butt-Head are on their couch, being lazy as usual.
+- The user has just loaded this new video.
+`
                     },
                     ...this.conversationHistory.slice(-6),
                     {
@@ -743,10 +758,17 @@ class BeavisAndButtHeadCommentary {
         this.lowerVideoVolume();
         
         // Enhanced 3D model animation
-        const model = character === 'butthead' ? this.buttheadModel : this.beavisModel;
-        if (model) {
-            const originalPosition = model.position.clone();
-            const originalRotation = model.rotation.clone();
+        const speakerModel = character === 'butthead' ? this.buttheadModel : this.beavisModel;
+        const listenerModel = character === 'butthead' ? this.beavisModel : this.buttheadModel;
+
+        let talkingAnimationInterval = null;
+        let listeningAnimationInterval = null;
+        let speakerOriginalRotation = null;
+        let listenerOriginalRotation = null;
+
+        if (speakerModel) {
+            speakerOriginalRotation = speakerModel.rotation.clone();
+            const originalPosition = speakerModel.position.clone(); // Keep original position for speaker
             
             const talkingAnimation = () => {
                 // More natural talking animation
@@ -756,25 +778,47 @@ class BeavisAndButtHeadCommentary {
                                 const rotationZIntensity = 0.02;
                                 const rotationXIntensity = 0.05;
                 
-                model.rotation.y = originalRotation.y + Math.sin(time) * rotationYIntensity;
-                model.position.y = originalPosition.y + Math.sin(time * 2) * positionYIntensity;
-                model.rotation.z = originalRotation.z + Math.sin(time * 1.5) * rotationZIntensity;
+                speakerModel.rotation.y = speakerOriginalRotation.y + Math.sin(time) * rotationYIntensity;
+                speakerModel.position.y = originalPosition.y + Math.sin(time * 2) * positionYIntensity; // Use speaker's originalPosition
+                speakerModel.rotation.z = speakerOriginalRotation.z + Math.sin(time * 1.5) * rotationZIntensity;
                 
                 // Add head bobbing
-                model.rotation.x = originalRotation.x + Math.sin(time * 3) * rotationXIntensity;
+                speakerModel.rotation.x = speakerOriginalRotation.x + Math.sin(time * 3) * rotationXIntensity;
             };
-            
-            const animationInterval = setInterval(talkingAnimation, 16);
-            
-                        const animationDuration = 4000;
-            setTimeout(() => {
-                clearInterval(animationInterval);
-                if (model) {
-                    model.position.copy(originalPosition);
-                    model.rotation.copy(originalRotation);
-                }
-            }, animationDuration);
+            talkingAnimationInterval = setInterval(talkingAnimation, 16);
         }
+
+        if (listenerModel && listenerModel.rotation) { // Ensure listener model and its rotation exist
+            listenerOriginalRotation = listenerModel.rotation.clone();
+            const listeningAnimation = () => {
+                const time = Date.now() * 0.002; // Slower speed for listening
+                const nodIntensity = 0.03; // Smaller intensity for nod
+                // Ensure listenerOriginalRotation is not null before accessing its properties
+                if (listenerOriginalRotation) {
+                    listenerModel.rotation.x = listenerOriginalRotation.x + Math.sin(time) * nodIntensity;
+                }
+            };
+            listeningAnimationInterval = setInterval(listeningAnimation, 16); // Use different interval variable
+        }
+
+        const animationDuration = 4000;
+        setTimeout(() => {
+            if (talkingAnimationInterval && speakerModel) { // Check if interval and model exist
+                clearInterval(talkingAnimationInterval);
+                // Ensure speakerOriginalRotation and the originalPosition captured at the start are available
+                if (speakerModel.position && speakerOriginalRotation && typeof originalPosition !== 'undefined') {
+                    speakerModel.position.copy(originalPosition); // Use the originalPosition captured before animation
+                    speakerModel.rotation.copy(speakerOriginalRotation);
+                }
+            }
+            if (listeningAnimationInterval && listenerModel && listenerModel.rotation) { // Check if interval, model and rotation exist
+                clearInterval(listeningAnimationInterval);
+                // Ensure listenerOriginalRotation is not null before using
+                if (listenerOriginalRotation) {
+                    listenerModel.rotation.copy(listenerOriginalRotation);
+                }
+            }
+        }, animationDuration);
         
         // ElevenLabs TTS with enhanced error handling
         if (this.voicesEnabled) {
