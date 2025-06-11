@@ -76,6 +76,28 @@ button:hover, .upload-btn:hover {
     transform: translateY(-2px);
 }
 
+button:active, .upload-btn:active {
+    /* @tweakable button active background color */
+    background: #cc4c1e; /* Darker shade */
+    /* @tweakable button active transform */
+    transform: translateY(1px); /* Push down effect */
+    /* @tweakable button active box shadow (optional) */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+button:disabled, .upload-btn:disabled {
+    /* @tweakable button disabled background color */
+    background: #a0a0a0; /* Greyed out */
+    /* @tweakable button disabled text color */
+    color: #e0e0e0;
+    /* @tweakable button disabled cursor */
+    cursor: not-allowed;
+    /* @tweakable button disabled transform (reset hover/active) */
+    transform: translateY(0);
+    /* @tweakable button disabled box shadow (reset hover/active) */
+    box-shadow: none;
+}
+
 #video-upload {
     display: none;
 }
@@ -537,13 +559,27 @@ button:hover, .upload-btn:hover {
     z-index: 1000;
 }
 
+#tv-screen.dragging {
+    /* @tweakable TV screen dragging box shadow */
+    box-shadow: 0 0 30px rgba(255, 107, 53, 0.7), inset 0 0 15px rgba(255, 255, 255, 0.2);
+    /* @tweakable TV screen dragging border */
+    border: 3px solid #ff8a50;
+    /* opacity: 0.85; /* Opacity is already handled by .draggable.dragging */
+}
+
 .resize-handle {
     display: none; /* Hide resize handles since we're using right-click scaling */
 }
 
 .drop-zone.active {
     /* @tweakable active drop zone border color */
-    border-color: #00ff00 !important;
+    border-color: #ff6b35 !important; /* Make it more vibrant, ensure it overrides */
+    /* @tweakable active drop zone border width */
+    border-width: 4px !important;
+    /* @tweakable active drop zone border style */
+    border-style: dashed !important;
     /* @tweakable active drop zone background overlay */
-    background: rgba(0, 255, 0, 0.1);
+    background: rgba(255, 107, 53, 0.15); /* Slightly more visible background */
+    /* @tweakable active drop zone box shadow for inset effect */
+    box-shadow: inset 0 0 15px rgba(255, 107, 53, 0.3);
 }

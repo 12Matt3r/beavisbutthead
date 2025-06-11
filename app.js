@@ -13,6 +13,12 @@ class BeavisAndButtHeadCommentary {
         this.lastCommentTime = 0;
         this.originalVideoVolume = 1.0;
         this.currentAudio = null; // Track current TTS audio
+        this.beavisState = 'idle'; // Initial state
+        this.buttheadState = 'idle'; // Initial state
+        this.beavisBaseRotation = null;
+        this.buttheadBaseRotation = null;
+        this.beavisBasePosition = null;
+        this.buttheadBasePosition = null;
         
         // 3D Scene setup - now main scene instead of separate character scenes
         this.scene = null;
@@ -135,6 +141,8 @@ class BeavisAndButtHeadCommentary {
             });
             this.beavisModel.visible = true;
             this.scene.add(this.beavisModel);
+            if (this.beavisModel.rotation) this.beavisBaseRotation = this.beavisModel.rotation.clone();
+            if (this.beavisModel.position) this.beavisBasePosition = this.beavisModel.position.clone();
             
             // Load Butt-Head model
             const buttheadGltf = await loader.loadAsync('./butt-head.glb');
@@ -158,6 +166,8 @@ class BeavisAndButtHeadCommentary {
             });
             this.buttheadModel.visible = true;
             this.scene.add(this.buttheadModel);
+            if (this.buttheadModel.rotation) this.buttheadBaseRotation = this.buttheadModel.rotation.clone();
+            if (this.buttheadModel.position) this.buttheadBasePosition = this.buttheadModel.position.clone();
             
         } catch (error) {
             console.error('Error loading 3D models:', error);
@@ -177,6 +187,57 @@ class BeavisAndButtHeadCommentary {
             this.camera.position.x += Math.sin(Date.now() * wobbleXSpeed) * wobbleXIntensity;
             this.camera.position.y += Math.cos(Date.now() * wobbleYSpeed) * wobbleYIntensity;
             this.camera.lookAt(0, 1, 0);
+        }
+
+        // Animations based on state
+        const animTime = Date.now();
+
+        // Beavis Animations
+        if (this.beavisModel && this.beavisBaseRotation && this.beavisModel.rotation && this.beavisBasePosition && this.beavisModel.position) {
+            if (this.beavisState === 'special_fire') {
+                const fireAnimSpeed = 0.015; // Faster
+                this.beavisModel.rotation.x = this.beavisBaseRotation.x + Math.sin(animTime * fireAnimSpeed) * 0.3; // Nodding fast
+                this.beavisModel.position.y = this.beavisBasePosition.y + Math.abs(Math.sin(animTime * fireAnimSpeed * 0.5)) * 0.1; // Slight bounce
+            } else if (this.beavisState === 'special_cool') {
+                const coolAnimSpeed = 0.008;
+                this.beavisModel.rotation.x = this.beavisBaseRotation.x + Math.sin(animTime * coolAnimSpeed) * 0.15; // Clear nod
+            } else if (this.beavisState === 'talking') {
+                // This state is handled by setInterval in speakLine for more complex animation.
+                // If a simpler continuous talking animation is needed here, it could be added.
+                // For now, relying on speakLine's animation.
+            } else if (this.beavisState === 'listening') {
+                 // This state is handled by setInterval in speakLine for more complex animation.
+            } else if (this.beavisState === 'idle') {
+                const idleSpeed = 0.001;
+                this.beavisModel.rotation.y = this.beavisBaseRotation.y + Math.sin(animTime * idleSpeed * 0.7) * 0.05;
+                this.beavisModel.rotation.z = this.beavisBaseRotation.z + Math.cos(animTime * idleSpeed * 0.5) * 0.03;
+                 // Ensure X rotation and Y position are at base for idle if not animated by another state
+                this.beavisModel.rotation.x = this.beavisBaseRotation.x;
+                this.beavisModel.position.y = this.beavisBasePosition.y;
+            }
+        }
+
+        // Butt-Head Animations
+        if (this.buttheadModel && this.buttheadBaseRotation && this.buttheadModel.rotation && this.buttheadBasePosition && this.buttheadModel.position) {
+            if (this.buttheadState === 'special_sucks') {
+                const sucksAnimSpeed = 0.01;
+                this.buttheadModel.rotation.y = this.buttheadBaseRotation.y + Math.sin(animTime * sucksAnimSpeed) * 0.25; // Side to side shake
+                this.buttheadModel.rotation.z = this.buttheadBaseRotation.z + Math.sin(animTime * sucksAnimSpeed * 0.8) * 0.1; // Slight tilt
+            } else if (this.buttheadState === 'special_cool') {
+                const coolAnimSpeed = 0.008;
+                this.buttheadModel.rotation.x = this.buttheadBaseRotation.x + Math.sin(animTime * coolAnimSpeed) * 0.1; // Slower, cooler nod
+            } else if (this.buttheadState === 'talking') {
+                // Relying on speakLine's animation.
+            } else if (this.buttheadState === 'listening') {
+                // Relying on speakLine's animation.
+            } else if (this.buttheadState === 'idle') {
+                const idleSpeed = 0.0008;
+                this.buttheadModel.rotation.y = this.buttheadBaseRotation.y + Math.sin(animTime * idleSpeed) * 0.08;
+                this.buttheadModel.rotation.x = this.buttheadBaseRotation.x + Math.sin(animTime * idleSpeed * 0.5) * 0.02;
+                // Ensure Z rotation and Y position are at base for idle
+                this.buttheadModel.rotation.z = this.buttheadBaseRotation.z;
+                this.buttheadModel.position.y = this.buttheadBasePosition.y;
+            }
         }
         
         if (this.renderer && this.scene && this.camera) {
@@ -391,13 +452,20 @@ class BeavisAndButtHeadCommentary {
             
             // Apply boundary constraints
             /* @tweakable boundary padding from screen edges */
-            const boundaryPadding = 20;
             const elementRect = element.getBoundingClientRect();
-            const maxLeft = window.innerWidth - elementRect.width - boundaryPadding;
-            const maxTop = window.innerHeight - elementRect.height - boundaryPadding;
-            
-            newLeft = Math.max(boundaryPadding, Math.min(maxLeft, newLeft));
-            newTop = Math.max(boundaryPadding, Math.min(maxTop, newTop));
+
+            if (element.id === 'tv-screen') {
+                // Stricter boundary: keep TV fully within viewport
+                newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - elementRect.width));
+                newTop = Math.max(0, Math.min(newTop, window.innerHeight - elementRect.height));
+            } else {
+                // Existing boundary padding for other draggable elements
+                const boundaryPadding = 20;
+                const maxLeft = window.innerWidth - elementRect.width - boundaryPadding;
+                const maxTop = window.innerHeight - elementRect.height - boundaryPadding;
+                newLeft = Math.max(boundaryPadding, Math.min(maxLeft, newLeft));
+                newTop = Math.max(boundaryPadding, Math.min(maxTop, newTop));
+            }
             
             element.style.left = `${newLeft}px`;
             element.style.top = `${newTop}px`;
@@ -445,10 +513,14 @@ class BeavisAndButtHeadCommentary {
                 
                 const relativeX = elementRect.left - tvRect.left;
                 const relativeY = elementRect.top - tvRect.top;
+
+                const snapIncrement = 10; // Snap to nearest 10 pixels
+                const snappedRelativeX = Math.round(relativeX / snapIncrement) * snapIncrement;
+                const snappedRelativeY = Math.round(relativeY / snapIncrement) * snapIncrement;
                 
                 element.style.position = 'absolute';
-                element.style.left = `${tvScreen.offsetLeft + relativeX}px`;
-                element.style.top = `${tvScreen.offsetTop + relativeY}px`;
+                element.style.left = `${tvScreen.offsetLeft + snappedRelativeX}px`;
+                element.style.top = `${tvScreen.offsetTop + snappedRelativeY}px`;
                 element.style.zIndex = photoOverlayZIndex;
                 
                 // Scale down to fit better on screen
@@ -647,8 +719,15 @@ Current session context:
             if (match) {
                 const character = match[1].toLowerCase().replace('-', '');
                 const text = match[2];
+                const lowerText = text.toLowerCase();
+
+                const flags = {
+                    isFire: lowerText.includes('fire') || lowerText.includes('burn'),
+                    isSucks: lowerText.includes('suck'), // Covers sucks, sucked, etc.
+                    isCool: lowerText.includes('cool') || lowerText.includes('awesome')
+                };
                 
-                await this.speakLine(character, text);
+                await this.speakLine(character, text, flags);
                 this.logComment(line);
                 
                 // Enhanced stats tracking for roasts and praise
@@ -750,17 +829,55 @@ Current session context:
         }
     }
 
-    async speakLine(character, text) {
+    async speakLine(character, text, flags = {}) {
         // Show speech bubble
         this.showSpeechBubble(character, text);
         
         // Lower video volume
         this.lowerVideoVolume();
         
-        // Enhanced 3D model animation
         const speakerModel = character === 'butthead' ? this.buttheadModel : this.beavisModel;
         const listenerModel = character === 'butthead' ? this.beavisModel : this.buttheadModel;
 
+        // Set character states based on flags and character
+        let isSpecialStateSet = false;
+        const specialAnimationDuration = 1500; // 1.5 seconds for special animations
+
+        if (character === 'beavis') {
+            if (flags.isFire) {
+                this.beavisState = 'special_fire';
+                isSpecialStateSet = true;
+            } else if (flags.isCool) {
+                this.beavisState = 'special_cool';
+                isSpecialStateSet = true;
+            } else {
+                this.beavisState = 'talking';
+            }
+            this.buttheadState = 'listening'; // Butt-Head is always listening when Beavis speaks
+        } else if (character === 'butthead') {
+            if (flags.isSucks) {
+                this.buttheadState = 'special_sucks';
+                isSpecialStateSet = true;
+            } else if (flags.isCool) {
+                this.buttheadState = 'special_cool';
+                isSpecialStateSet = true;
+            } else {
+                this.buttheadState = 'talking';
+            }
+            this.beavisState = 'listening'; // Beavis is always listening when Butt-Head speaks
+        }
+
+        if (isSpecialStateSet) {
+            setTimeout(() => {
+                if (character === 'beavis' && (this.beavisState === 'special_fire' || this.beavisState === 'special_cool')) {
+                    this.beavisState = 'talking';
+                } else if (character === 'butthead' && (this.buttheadState === 'special_sucks' || this.buttheadState === 'special_cool')) {
+                    this.buttheadState = 'talking';
+                }
+            }, specialAnimationDuration);
+        }
+
+        // Enhanced 3D model animation (talking and default listening)
         let talkingAnimationInterval = null;
         let listeningAnimationInterval = null;
         let speakerOriginalRotation = null;
@@ -813,11 +930,13 @@ Current session context:
             }
             if (listeningAnimationInterval && listenerModel && listenerModel.rotation) { // Check if interval, model and rotation exist
                 clearInterval(listeningAnimationInterval);
-                // Ensure listenerOriginalRotation is not null before using
-                if (listenerOriginalRotation) {
+                if (listenerOriginalRotation) { // Ensure listenerOriginalRotation is not null
                     listenerModel.rotation.copy(listenerOriginalRotation);
                 }
             }
+            // Reset states to idle after animation finishes
+            this.beavisState = 'idle';
+            this.buttheadState = 'idle';
         }, animationDuration);
         
         // ElevenLabs TTS with enhanced error handling
