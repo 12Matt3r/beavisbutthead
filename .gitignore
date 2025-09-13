@@ -1,0 +1,7 @@
+# .gitignore
+
+# Ignore the user's local configuration file.
+#
+# This file contains secret API keys and other sensitive information, and
+# should not be committed to version control.
+config.js
